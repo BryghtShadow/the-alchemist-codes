@@ -1,5 +1,6 @@
 import os
 
+import mwclient
 from gamefile import GameFile
 
 class Main:
@@ -19,34 +20,36 @@ class Main:
                 print("Getting list of every existing wiki page")
 
                 # Get all pages, which we will reduce to get pages to be deleted
-                allPages = [
-                    it.get('query', {}).get('allpages')
-                    for it in site.get("query", "apcontinue", {
-                        "list": "allpages",
-                        "apnamespace": "10000",
-                        "aplimit": "max",
-                    })
-                ]
-                    it["query"]?->get("allpages")
-                }.map {
-                    it->get("title")
-                }
+                ap = wikiBot.allpages(namespace="10000", limit="max")
+                allPages = [p.name for p in ap]
 
                 print("Comparing to $allPages.size existing wiki pages for $gameFile.typeof.name")
                 # Get Failed Inserts
-                failedInserts = wikiBot.batchReq("query", "cmcontinue", {
-                    "list": "categorymembers",
-                    "cmtitle": "Category:Data_pages_that_failed_a_table_insert",
-                    "cmlimit": "max",
-                }) {
-                    it["query"]?->get("categorymembers")
-                }.map {
-                    it->get("title")
-                }
+                site = mwclient.Site('thealchemistcode.gamepedia.com', path='/')
+                cat = site.categories.get('Data_pages_that_failed_a_table_insert')
+                failedInserts = [p.name for p in cat.members()]
                 # failedInserts.clear()
 
+                def edit(titlesWithContent,
+                         cb=None,
+                         allPages=[],
+                         purgeTitles=[]):
+                    site.login(username=username, password=password)
+
+                    print(f"titlesWithContent.size: {len(titlesWithContent.keys())}")
+                    titles = titlesWithContent.keys()
+                    if len(titles) > 500:
+                        titles1 = titles[:500]
+                    titlesWithContent = {}
+
+                    result =
+
+
                 while wikiFiles:
-                    wikiBot.edit(wikiFiles, | uri | {print("Updated $uri")}, allPages, failedInserts)
+                    wikiBot.edit(wikiFiles,
+                                 (lambda uri: print(f"Updated {uri}")),
+                                 allPages,
+                                 failedInserts)
 
                 # Delete unused pages
                 x = True
