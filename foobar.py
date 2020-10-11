@@ -10,7 +10,7 @@ group_name = 'the-alchemist-codes'
 
 conn = sqlite3.connect('cache.sqlite')
 conn.row_factory = sqlite3.Row
-conn.execute("""DROP TABLE IF EXISTS cache;""")
+# conn.execute("""DROP TABLE IF EXISTS cache;""")
 conn.execute("""CREATE TABLE IF NOT EXISTS cache(
     project_id INT,
     file_path TEXT,
@@ -24,8 +24,6 @@ conn.commit()
 
 gl = gitlab.Gitlab('https://gitlab.com')
 
-class GameFile:
-
 
 def get_file(project_name: Union[str, int], file_path: str):
     curs = conn.cursor()
@@ -35,7 +33,7 @@ def get_file(project_name: Union[str, int], file_path: str):
     c = commits[0]
     print("Commit id:", c.id)
 
-    curs.execute("""SELECT content, commit_id FROM cache
+    curs.execute("""SELECT content, commit_id, last_commit_id FROM cache
         WHERE project_id=:project_id
         AND file_path=:file_path
     """, {
@@ -43,7 +41,7 @@ def get_file(project_name: Union[str, int], file_path: str):
         'file_path': file_path,
     })
     row = curs.fetchone()
-    if row and row['last_commit_id'] == c.id:
+    if row and row['commit_id'] == c.id:
         print("File is cached and is not stale! ^_^")
         return row['content']
 
@@ -68,14 +66,13 @@ def get_file(project_name: Union[str, int], file_path: str):
 
     print("Saving file to cache...")
     conn.execute("""
-    INSERT INTO cache (project_id, file_path, content_sha256, commit_id, last_commit_id, content)
-        VALUES (:project_id, :file_path, :content_sha256, :last_commit_id, :content)
-        ON CONFLICT (project_id, file_path) DO UPDATE SET
-            content=excluded.content_sha256,
-            last_commit_id=excluded.last_commit_id,
-            content=excluded.content
-        WHERE content_sha256<>excluded.content_sha256
-        OR last_commit_id<>excluded.last_commit_id;
+        INSERT INTO cache (project_id, file_path, content_sha256, commit_id, last_commit_id, content)
+            VALUES (:project_id, :file_path, :content_sha256, :commit_id, :last_commit_id, :content)
+            ON CONFLICT (project_id, file_path) DO UPDATE SET
+                content=excluded.content_sha256,
+                last_commit_id=excluded.last_commit_id,
+                commit_id=excluded.commit_id,
+                content=excluded.content;
     """, obj)
     conn.commit()
     print("Here you go~")
