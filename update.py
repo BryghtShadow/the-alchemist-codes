@@ -43,7 +43,6 @@ def getfile(project_name, file_path):
 
 def main(iname):
     obj = {}
-    hashes = {}
 
     groups = {
         'AF': 'Artifact',
@@ -70,6 +69,8 @@ def main(iname):
                 # tag = af.pop('tag', None)
                 txt = json.dumps(af, sort_keys=True, ensure_ascii=False, separators=(',',':'))
                 obj[server] = txt
+
+    locs = {}
     languages = [
         'english',
         'japanese',
@@ -85,20 +86,23 @@ def main(iname):
             if not m:
                 continue
             param = m.group(1).lower()
-            obj.setdefault('loc', {}).setdefault(param, {})[lang] = val
-    txt = json.dumps(obj['loc'], sort_keys=True, ensure_ascii=False, separators=(',', ':'))
-    obj['loc'] = txt
+            locs.setdefault(param, {})[lang] = val
+    obj['loc'] = json.dumps(locs, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
 
     # TODO: Directly update wiki instead of dumping output to terminal.
-    print("{{#invoke:Data|insert")
+    s = ["{{#invoke:Data|insert"]
     for k, v in obj.items():
-        print(f"| {k} = <nowiki>{v}</nowiki>")
+        s.append(f"| {k} = <nowiki>{v}</nowiki>")
     for k, v in obj.items():
         m = hashlib.sha256()
         m.update(v.encode('utf-8'))
-        print(f"| {k}_sha256 = {m.hexdigest()}")
-    print("}}")
+        s.append(f"| {k}_sha256 = {m.hexdigest()}")
+    s.append("}}")
+
+    return '\n'.join(s)
 
 if __name__ == '__main__':
-    iname = input("enter iname: ")
-    main(iname)
+    # iname = input("enter iname: ")
+    iname = "AF_ACCS_BRACELET_03"
+    dat = main(iname)
+    print(dat)
